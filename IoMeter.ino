@@ -1,4 +1,10 @@
 #include <PZEM004Tv30.h>
+#include <LiquidCrystal_I2C.h>
+#include <Wire.h>
+
+// Initialize LCD with address 0x27
+// Use pins 21 and 22
+LiquidCrystal_I2C lcd(0x27, 16, 2); 
 
 // Iniatialize PZEM to pins 16 and 17
 PZEM004Tv30 pzem(Serial2, 16, 17);
@@ -6,6 +12,16 @@ PZEM004Tv30 pzem(Serial2, 16, 17);
 void setup() {
     // Establish serial communication with baud rate 115200
     Serial.begin(115200);
+    // Initialize the LCD
+    lcd.init();
+    lcd.backlight();
+
+    // Display an introduction 
+    lcd.setCursor(0, 0);
+    lcd.print("IoMeter Demo");
+    lcd.setCursor(0, 1);
+    lcd.print("by Team 4");
+    delay(4000);
 }
 
 void loop() {
@@ -38,7 +54,36 @@ void loop() {
         Serial.print("Energy: ");       Serial.print(energy,3);     Serial.println("kWh");
         Serial.print("Frequency: ");    Serial.print(frequency, 1); Serial.println("Hz");
         Serial.print("PF: ");           Serial.println(pf);
+        Serial.println();
+
+        // Display voltage and current
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Voltage: ");
+        lcd.print(voltage);
+        lcd.setCursor(0, 1);
+        lcd.print("Current: ");
+        lcd.print(current);
+        delay(2000);
+
+        // Display Power and Energy
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Power: ");
+        lcd.print(power);
+        lcd.setCursor(0, 1);
+        lcd.print("Energy: ");
+        lcd.print(energy);
+        delay(2000);
+
+        // Display Frequancy and Power Factor
+        lcd.clear();
+        lcd.setCursor(0, 0);
+        lcd.print("Frquency: ");
+        lcd.print(frequency);
+        lcd.setCursor(0, 1);
+        lcd.print("PF: ");
+        lcd.print(pf);
+        delay(2000);
     }
-    Serial.println();
-    delay(2000);
 }
