@@ -21,7 +21,7 @@ void setup() {
     lcd.print("IoMeter Demo");
     lcd.setCursor(0, 1);
     lcd.print("by Team 4");
-    delay(4000);
+    delay(2000);
 }
 
 void loop() {
@@ -32,6 +32,8 @@ void loop() {
     float energy = pzem.energy();
     float frequency = pzem.frequency();
     float pf = pzem.pf();
+
+    float cost = energy * 10;
 
     // Check if the measurements are valid
     if(isnan(voltage)) {
@@ -56,34 +58,18 @@ void loop() {
         Serial.print("PF: ");           Serial.println(pf);
         Serial.println();
 
-        // Display voltage and current
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Voltage: ");
-        lcd.print(voltage);
-        lcd.setCursor(0, 1);
-        lcd.print("Current: ");
-        lcd.print(current);
-        delay(2000);
-
         // Display Power and Energy
         lcd.clear();
         lcd.setCursor(0, 0);
-        lcd.print("Power: ");
+        lcd.print("P: ");
         lcd.print(power);
+        lcd.print(" E: ");
+        lcd.print(energy, 3);
+        lcd.print("kWh");
+        // Display the cost
         lcd.setCursor(0, 1);
-        lcd.print("Energy: ");
-        lcd.print(energy);
-        delay(2000);
-
-        // Display Frequancy and Power Factor
-        lcd.clear();
-        lcd.setCursor(0, 0);
-        lcd.print("Frquency: ");
-        lcd.print(frequency);
-        lcd.setCursor(0, 1);
-        lcd.print("PF: ");
-        lcd.print(pf);
+        lcd.print("Cost: Php");
+        lcd.print(cost);
         delay(2000);
     }
 }
