@@ -54,7 +54,7 @@ int led_status = 0;
 int buzzer_status = 0;
 
 // Set the JSON capacity to 2 members and declare a buffer to hold the serialized json
-const size_t CAPACITY = JSON_OBJECT_SIZE(2);
+const size_t post_request_capacity = JSON_OBJECT_SIZE(2);
 const size_t post_response_capacity = JSON_OBJECT_SIZE(3);
 char json_output[128];
 char json_output_pretty[128];
@@ -150,7 +150,7 @@ void loop() {
             https.addHeader("Content-Type", "application/json");
 
             // Create a StaticJsonDocument to hold memory representation of the object for POST request
-            StaticJsonDocument<CAPACITY> doc;
+            StaticJsonDocument<post_request_capacity> doc;
             JsonObject object = doc.to<JsonObject>();
 
             // Adding members to the JsonDocument automatically converts it to object
@@ -172,6 +172,24 @@ void loop() {
                 Serial.printf("[HTTPS] POST successful. Code: %d\n Response:\n", http_code);
                 String payload = https.getString();
                 Serial.println(payload);
+
+                // Create a StaticJsonDocument to hold memory representation of the object
+                StaticJsonDocument<post_response_capacity> doc;
+
+                // Deserialize the JSON to extract the data
+                DeserializationError err = deserializeJson(doc, payload);
+
+                // If no error occured in parsing
+                if (!err) {
+                    cost = doc["cost"];
+                    led_status = doc["led_status"];
+                    buzzer_status = doc["buzzer_status"];
+                    Serial.printf("Deserialized data: \nCost: %f\nLED: %d\nBuzzer: %d\n", cost, led_status,buzzer_status);
+                }
+                else {
+                    Serial.printf("Deserializing failed with code %s\n", err.f_str());
+                }
+
             }
             else {
                 Serial.printf("[HTTPS] POST unsuccessful. Error code: %d\n Response:\n", http_code);
