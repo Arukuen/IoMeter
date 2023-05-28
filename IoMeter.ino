@@ -55,7 +55,7 @@ int buzzer_status = 0;
 
 // Set the JSON capacity to 2 members and declare a buffer to hold the serialized json
 const size_t post_request_capacity = JSON_OBJECT_SIZE(2);
-const size_t post_response_capacity = JSON_OBJECT_SIZE(3);
+const size_t post_response_capacity = JSON_OBJECT_SIZE(6);
 char json_output[128];
 char json_output_pretty[128];
 
