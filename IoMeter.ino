@@ -10,7 +10,7 @@
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
 
 // Iniatialize PZEM to pins 16 and 17
-PZEM004Tv30 pzem(Serial2, 16, 17);
+PZEM004Tv30 pzem(Serial2, 17, 16);
 
 // Create instance of WiFiClientSecure and HTTPClient
 WiFiClientSecure *client = new WiFiClientSecure;
@@ -47,8 +47,6 @@ const char* certificate = \
 "-----END CERTIFICATE-----\n";
 
 // Simlating power and energy
-double power = 0;
-double energy = 0;
 double cost = 0;
 int led_status = 0;
 int buzzer_status = 0;
@@ -91,15 +89,10 @@ void loop() {
     // Get all the measurements
     float voltage = pzem.voltage();
     float current = pzem.current();
-    // float power = pzem.power();
-    // float energy = pzem.energy();
+    float power = pzem.power();
+    float energy = pzem.energy();
     float frequency = pzem.frequency();
     float pf = pzem.pf();
-
-    // Simulating the power and energy
-    power = 420;
-    energy += ((power / (3600/2)) / 1000);
-
 
     // Check if the measurements are valid
     if(isnan(voltage)) {
@@ -192,7 +185,7 @@ void loop() {
 
             }
             else {
-                Serial.printf("[HTTPS] POST unsuccessful. Error code: %d\n Response:\n", http_code);
+                Serial.printf("[HTTPS] POST unsuccessful. Error: %s\n", https.errorToString(http_code).c_str());
             }
             https.end();
         }
