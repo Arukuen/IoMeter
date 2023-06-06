@@ -5,6 +5,8 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
+#define BUTTON_PIN 15
+
 // Initialize LCD with address 0x27
 // Use pins 21 and 22
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
@@ -47,8 +49,8 @@ const char* certificate = \
 "-----END CERTIFICATE-----\n";
 
 //Simlating power and energy
-double power = 0;
-double energy = 0;
+// double power = 0;
+// double energy = 0;
 
 double cost = 0;
 int led_status = 0;
@@ -63,6 +65,8 @@ char json_output_pretty[128];
 void setup() {
     // Establish serial communication with baud rate 115200
     Serial.begin(115200);
+    pinMode(BUTTON_PIN, INPUT);
+
     // Initialize the LCD
     lcd.init();
     lcd.backlight();
@@ -92,15 +96,15 @@ void loop() {
     // Get all the measurements
     float voltage = pzem.voltage();
     float current = pzem.current();
-    // float power = pzem.power();
-    // float energy = pzem.energy();
+    float power = pzem.power();
+    float energy = pzem.energy();
     float frequency = pzem.frequency();
     float pf = pzem.pf();
 
     // Simulating the power and energy
-    power = 60;
-    energy += ((power / (3600/2)) / 1000);
-    float cost = energy * 10;
+    // power = 60;
+    // energy += ((power / (3600/2)) / 1000);
+    // float cost = energy * 10;
 
     // Check if the measurements are valid
     if(isnan(voltage)) {
@@ -194,7 +198,7 @@ void loop() {
 
     // Display Power and Energy
     lcd.clear();
-    lcd.setCursor(0, 0);
+    lcd.home();
     lcd.print("P:");
     lcd.print(power);
     lcd.print("  E:");
@@ -204,5 +208,12 @@ void loop() {
     lcd.print("Cost: Php");
     lcd.print(cost);
 
+    int button = digitalRead(BUTTON_PIN);
+    if (button) {
+        lcd.clear();
+        lcd.home();
+        lcd.print("Resetting...");
+        pzem.resetEnergy();
+    }
     delay(5000);
 }
