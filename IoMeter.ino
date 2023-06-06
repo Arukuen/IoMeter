@@ -46,13 +46,16 @@ const char* certificate = \
 "R9I4LtD+gdwyah617jzV/OeBHRnDJELqYzmp\n" \
 "-----END CERTIFICATE-----\n";
 
-// Simlating power and energy
+//Simlating power and energy
+double power = 0;
+double energy = 0;
+
 double cost = 0;
 int led_status = 0;
 int buzzer_status = 0;
 
 // Set the JSON capacity to 2 members and declare a buffer to hold the serialized json
-const size_t post_request_capacity = JSON_OBJECT_SIZE(2);
+const size_t post_request_capacity = JSON_OBJECT_SIZE(3);
 const size_t post_response_capacity = JSON_OBJECT_SIZE(6);
 char json_output[128];
 char json_output_pretty[128];
@@ -89,10 +92,15 @@ void loop() {
     // Get all the measurements
     float voltage = pzem.voltage();
     float current = pzem.current();
-    float power = pzem.power();
-    float energy = pzem.energy();
+    // float power = pzem.power();
+    // float energy = pzem.energy();
     float frequency = pzem.frequency();
     float pf = pzem.pf();
+
+    // Simulating the power and energy
+    power = 60;
+    energy += ((power / (3600/2)) / 1000);
+    float cost = energy * 10;
 
     // Check if the measurements are valid
     if(isnan(voltage)) {
@@ -118,21 +126,9 @@ void loop() {
     Serial.print("Voltage: ");      Serial.print(voltage);      Serial.println("V");
     Serial.print("Current: ");      Serial.print(current);      Serial.println("A");
     Serial.print("Power: ");        Serial.print(power);        Serial.println("W");
-    Serial.print("Energy: ");       Serial.print(energy,5);     Serial.println("kWh");
+    Serial.print("Energy: ");       Serial.print(energy,3);     Serial.println("kWh");
     Serial.print("Frequency: ");    Serial.print(frequency, 1); Serial.println("Hz");
     Serial.print("PF: ");           Serial.println(pf);
-
-    // Display Power and Energy
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("P:");
-    lcd.print(power, 0);
-    lcd.print("  E:");
-    lcd.print(energy, 5);
-    // Display the cost
-    lcd.setCursor(0, 1);
-    lcd.print("Cost: Php");
-    lcd.print(cost);
 
     // Check if the device is still connected 
     if (WiFi.status() == WL_CONNECTED){
@@ -148,6 +144,7 @@ void loop() {
 
             // Adding members to the JsonDocument automatically converts it to object
             object["kwh"] = energy;
+            object["power"] = power;
             object["device_id"] = "A";
 
             // Serialize the object to produce a JSON document
@@ -162,7 +159,7 @@ void loop() {
 
             // HTTP code is negative on error
             if (http_code > 0 && http_code == HTTP_CODE_OK) {
-                Serial.printf("[HTTPS] POST successful. Code: %d\n Response:\n", http_code);
+                Serial.printf("[HTTPS] POST successful. Code: %d\nResponse:\n", http_code);
                 String payload = https.getString();
                 Serial.println(payload);
 
@@ -194,5 +191,18 @@ void loop() {
         Serial.println("Unable to connect to the network");
     }
     Serial.println("__________________________________________");
+
+    // Display Power and Energy
+    lcd.clear();
+    lcd.setCursor(0, 0);
+    lcd.print("P:");
+    lcd.print(power);
+    lcd.print("  E:");
+    lcd.print(energy, 3);
+    // Display the cost
+    lcd.setCursor(0, 1);
+    lcd.print("Cost: Php");
+    lcd.print(cost);
+
     delay(5000);
 }
