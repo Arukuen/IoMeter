@@ -4,6 +4,8 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include "RGB.h"
+#include "Buzzer.h"
 
 #define PIN_BUTTON 15
 #define PIN_RED 32
@@ -21,6 +23,10 @@ PZEM004Tv30 pzem(Serial2, 17, 16);
 // Create instance of WiFiClientSecure and HTTPClient
 WiFiClientSecure *client = new WiFiClientSecure;
 HTTPClient https; 
+
+// Initialize RGB LED and Buzzer
+RGB rgb(PIN_RED, PIN_GREEN, PIN_BLUE);
+Buzzer buzzer(PIN_BUZZER);
 
 // Network credentials
 const char* ssid = "iometer";
@@ -53,12 +59,12 @@ const char* certificate = \
 "-----END CERTIFICATE-----\n";
 
 //Simlating power and energy
-// double power = 0;
-// double energy = 0;
+double power = 0;
+double energy = 0;
 
 double cost = 0;
-int led_status = 0;
-int buzzer_status = 0;
+Status led_status = Low;
+Status buzzer_status = Low;
 
 // Set the JSON capacity to 2 members and declare a buffer to hold the serialized json
 const size_t post_request_capacity = JSON_OBJECT_SIZE(3);
@@ -69,7 +75,7 @@ char json_output_pretty[128];
 void setup() {
     // Establish serial communication with baud rate 115200
     Serial.begin(115200);
-    pinMode(BUTTON_PIN, INPUT);
+    pinMode(PIN_BUTTON, INPUT);
 
     // Initialize the LCD
     lcd.init();
@@ -100,15 +106,15 @@ void loop() {
     // Get all the measurements
     float voltage = pzem.voltage();
     float current = pzem.current();
-    float power = pzem.power();
-    float energy = pzem.energy();
+    // float power = pzem.power();
+    // float energy = pzem.energy();
     float frequency = pzem.frequency();
     float pf = pzem.pf();
 
     // Simulating the power and energy
-    // power = 60;
-    // energy += ((power / (3600/2)) / 1000);
-    // float cost = energy * 10;
+    power = 600;
+    energy += ((power / (3600/2)) / 1000);
+    float cost = energy * 10;
 
     // Check if the measurements are valid
     if(isnan(voltage)) {
@@ -179,10 +185,27 @@ void loop() {
 
                 // If no error occured in parsing
                 if (!err) {
+                    // Store the deserialized value form the JSON
                     cost = doc["cost"];
                     led_status = doc["led_status"];
                     buzzer_status = doc["buzzer_status"];
+
+                    if (cost > 0.01) {
+                        led_status = Mid;
+                        buzzer_status = Mid;
+                    }
+
+                    if (cost > 0.03) {
+                        led_status = High;
+                        buzzer_status = High;
+                    }
+
+                    // Turn on the actuators accordingly
+                    rgb.on(led_status);
+                    buzzer.on(buzzer_status);
+
                     Serial.printf("Deserialized data: \nCost: %f\nLED: %d\nBuzzer: %d\n", cost, led_status,buzzer_status);
+
                 }
                 else {
                     Serial.printf("Deserializing failed with code %s\n", err.f_str());
@@ -212,7 +235,8 @@ void loop() {
     lcd.print("Cost: Php");
     lcd.print(cost);
 
-    int button = digitalRead(BUTTON_PIN);
+    // Logic for resetting
+    int button = digitalRead(PIN_BUTTON);
     if (button) {
         lcd.clear();
         lcd.home();
