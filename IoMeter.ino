@@ -5,7 +5,11 @@
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
 
-#define BUTTON_PIN 15
+#define PIN_BUTTON 15
+#define PIN_RED 32
+#define PIN_GREEN 33
+#define PIN_BLUE 27
+#define PIN_BUZZER 23
 
 // Initialize LCD with address 0x27
 // Use pins 21 and 22
