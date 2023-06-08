@@ -59,8 +59,8 @@ const char* certificate = \
 "-----END CERTIFICATE-----\n";
 
 //Simlating power and energy
-double power = 0;
-double energy = 0;
+// double power = 0;
+// double energy = 0;
 
 double cost = 0;
 Status led_status = Low;
@@ -106,15 +106,15 @@ void loop() {
     // Get all the measurements
     float voltage = pzem.voltage();
     float current = pzem.current();
-    // float power = pzem.power();
-    // float energy = pzem.energy();
+    float power = pzem.power();
+    float energy = pzem.energy();
     float frequency = pzem.frequency();
     float pf = pzem.pf();
 
     // Simulating the power and energy
-    power = 600;
-    energy += ((power / (3600/2)) / 1000);
-    float cost = energy * 10;
+    // power = 600;
+    // energy += ((power / (3600/2)) / 1000);
+    // float cost = energy * 10;
 
     // Check if the measurements are valid
     if(isnan(voltage)) {
@@ -148,7 +148,7 @@ void loop() {
     if (WiFi.status() == WL_CONNECTED){
         // Starting the https connection
         Serial.println("[HTTPS] begin");
-        if (https.begin(*client, "https://smart-meter-iot-server.onrender.com/api/device_response")) {
+        if (https.begin(*client, post_url)) {
             // Add the necessary header
             https.addHeader("Content-Type", "application/json");
 
@@ -189,16 +189,6 @@ void loop() {
                     cost = doc["cost"];
                     led_status = doc["led_status"];
                     buzzer_status = doc["buzzer_status"];
-
-                    if (cost > 0.01) {
-                        led_status = Mid;
-                        buzzer_status = Mid;
-                    }
-
-                    if (cost > 0.03) {
-                        led_status = High;
-                        buzzer_status = High;
-                    }
 
                     // Turn on the actuators accordingly
                     rgb.on(led_status);
