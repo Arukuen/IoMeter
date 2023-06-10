@@ -4,17 +4,29 @@
 #include <WiFiClientSecure.h>
 #include <HTTPClient.h>
 #include <ArduinoJson.h>
+#include "RGB.h"
+#include "Buzzer.h"
+
+#define PIN_BUTTON 15
+#define PIN_RED 32
+#define PIN_GREEN 33
+#define PIN_BLUE 27
+#define PIN_BUZZER 23
 
 // Initialize LCD with address 0x27
 // Use pins 21 and 22
 LiquidCrystal_I2C lcd(0x27, 16, 2); 
 
 // Iniatialize PZEM to pins 16 and 17
-PZEM004Tv30 pzem(Serial2, 16, 17);
+PZEM004Tv30 pzem(Serial2, 17, 16);
 
 // Create instance of WiFiClientSecure and HTTPClient
 WiFiClientSecure *client = new WiFiClientSecure;
 HTTPClient https; 
+
+// Initialize RGB LED and Buzzer
+RGB rgb(PIN_RED, PIN_GREEN, PIN_BLUE);
+Buzzer buzzer(PIN_BUZZER);
 
 // Network credentials
 const char* ssid = "iometer";
@@ -46,15 +58,16 @@ const char* certificate = \
 "R9I4LtD+gdwyah617jzV/OeBHRnDJELqYzmp\n" \
 "-----END CERTIFICATE-----\n";
 
-// Simlating power and energy
-double power = 0;
-double energy = 0;
+//Simlating power and energy
+// double power = 0;
+// double energy = 0;
+
 double cost = 0;
-int led_status = 0;
-int buzzer_status = 0;
+Status led_status = Low;
+Status buzzer_status = Low;
 
 // Set the JSON capacity to 2 members and declare a buffer to hold the serialized json
-const size_t post_request_capacity = JSON_OBJECT_SIZE(2);
+const size_t post_request_capacity = JSON_OBJECT_SIZE(3);
 const size_t post_response_capacity = JSON_OBJECT_SIZE(6);
 char json_output[128];
 char json_output_pretty[128];
@@ -62,6 +75,8 @@ char json_output_pretty[128];
 void setup() {
     // Establish serial communication with baud rate 115200
     Serial.begin(115200);
+    pinMode(PIN_BUTTON, INPUT);
+
     // Initialize the LCD
     lcd.init();
     lcd.backlight();
@@ -91,15 +106,15 @@ void loop() {
     // Get all the measurements
     float voltage = pzem.voltage();
     float current = pzem.current();
-    // float power = pzem.power();
-    // float energy = pzem.energy();
+    float power = pzem.power();
+    float energy = pzem.energy();
     float frequency = pzem.frequency();
     float pf = pzem.pf();
 
     // Simulating the power and energy
-    power = 420;
-    energy += ((power / (3600/2)) / 1000);
-
+    // power = 600;
+    // energy += ((power / (3600/2)) / 1000);
+    // float cost = energy * 10;
 
     // Check if the measurements are valid
     if(isnan(voltage)) {
@@ -125,27 +140,15 @@ void loop() {
     Serial.print("Voltage: ");      Serial.print(voltage);      Serial.println("V");
     Serial.print("Current: ");      Serial.print(current);      Serial.println("A");
     Serial.print("Power: ");        Serial.print(power);        Serial.println("W");
-    Serial.print("Energy: ");       Serial.print(energy,5);     Serial.println("kWh");
+    Serial.print("Energy: ");       Serial.print(energy,3);     Serial.println("kWh");
     Serial.print("Frequency: ");    Serial.print(frequency, 1); Serial.println("Hz");
     Serial.print("PF: ");           Serial.println(pf);
-
-    // Display Power and Energy
-    lcd.clear();
-    lcd.setCursor(0, 0);
-    lcd.print("P:");
-    lcd.print(power, 0);
-    lcd.print("  E:");
-    lcd.print(energy, 5);
-    // Display the cost
-    lcd.setCursor(0, 1);
-    lcd.print("Cost: Php");
-    lcd.print(cost);
 
     // Check if the device is still connected 
     if (WiFi.status() == WL_CONNECTED){
         // Starting the https connection
         Serial.println("[HTTPS] begin");
-        if (https.begin(*client, "https://smart-meter-iot-server.onrender.com/api/device_response")) {
+        if (https.begin(*client, post_url)) {
             // Add the necessary header
             https.addHeader("Content-Type", "application/json");
 
@@ -155,6 +158,7 @@ void loop() {
 
             // Adding members to the JsonDocument automatically converts it to object
             object["kwh"] = energy;
+            object["power"] = power;
             object["device_id"] = "A";
 
             // Serialize the object to produce a JSON document
@@ -169,7 +173,7 @@ void loop() {
 
             // HTTP code is negative on error
             if (http_code > 0 && http_code == HTTP_CODE_OK) {
-                Serial.printf("[HTTPS] POST successful. Code: %d\n Response:\n", http_code);
+                Serial.printf("[HTTPS] POST successful. Code: %d\nResponse:\n", http_code);
                 String payload = https.getString();
                 Serial.println(payload);
 
@@ -181,10 +185,17 @@ void loop() {
 
                 // If no error occured in parsing
                 if (!err) {
+                    // Store the deserialized value form the JSON
                     cost = doc["cost"];
                     led_status = doc["led_status"];
                     buzzer_status = doc["buzzer_status"];
+
+                    // Turn on the actuators accordingly
+                    rgb.on(led_status);
+                    buzzer.on(buzzer_status);
+
                     Serial.printf("Deserialized data: \nCost: %f\nLED: %d\nBuzzer: %d\n", cost, led_status,buzzer_status);
+
                 }
                 else {
                     Serial.printf("Deserializing failed with code %s\n", err.f_str());
@@ -192,7 +203,7 @@ void loop() {
 
             }
             else {
-                Serial.printf("[HTTPS] POST unsuccessful. Error code: %d\n Response:\n", http_code);
+                Serial.printf("[HTTPS] POST unsuccessful. Error: %s\n", https.errorToString(http_code).c_str());
             }
             https.end();
         }
@@ -201,5 +212,26 @@ void loop() {
         Serial.println("Unable to connect to the network");
     }
     Serial.println("__________________________________________");
+
+    // Display Power and Energy
+    lcd.clear();
+    lcd.home();
+    lcd.print("P:");
+    lcd.print(power);
+    lcd.print("  E:");
+    lcd.print(energy, 3);
+    // Display the cost
+    lcd.setCursor(0, 1);
+    lcd.print("Cost: Php");
+    lcd.print(cost);
+
+    // Logic for resetting
+    int button = digitalRead(PIN_BUTTON);
+    if (button) {
+        lcd.clear();
+        lcd.home();
+        lcd.print("Resetting...");
+        pzem.resetEnergy();
+    }
     delay(5000);
 }
