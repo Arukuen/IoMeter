@@ -7,6 +7,7 @@
 #include "RGB.h"
 #include "Buzzer.h"
 
+// Define the pins to the ESP32
 #define PIN_BUTTON 15
 #define PIN_RED 32
 #define PIN_GREEN 33
@@ -28,10 +29,11 @@ HTTPClient https;
 RGB rgb(PIN_RED, PIN_GREEN, PIN_BLUE);
 Buzzer buzzer(PIN_BUZZER);
 
-// Network credentials
+// Network credentials of the WiFi
 const char* ssid = "4studentstoo";
 const char* password = "W1F14students";
 
+// URL for POST request
 const char* post_url = "https://smart-meter-iot-server.onrender.com/api/device_response";
 
 // Certificate from the web server necessary for HTTPS connection
@@ -58,19 +60,18 @@ const char* certificate = \
 "R9I4LtD+gdwyah617jzV/OeBHRnDJELqYzmp\n" \
 "-----END CERTIFICATE-----\n";
 
-//Simlating power and energy
-// double power = 0;
-// double energy = 0;
-
+// The device ID of the current system, which is hardcoded for each new system
 const char device_id[] = "A";
 
+// Global variables to store data received from the server
 double cost = 0;
 Status led_status = Low;
 Status buzzer_status = Low;
 
-// Set the JSON capacity to 2 members and declare a buffer to hold the serialized json
+// Set the JSON capacity for the request and response
 const size_t post_request_capacity = JSON_OBJECT_SIZE(3);
 const size_t post_response_capacity = JSON_OBJECT_SIZE(6);
+// Declare a buffer to hold the serialized json
 char json_output[128];
 char json_output_pretty[128];
 
@@ -102,22 +103,21 @@ void setup() {
     // Set the secure client with certificate
     client->setCACert(certificate);
 
+    // Print the IP Address to confirm from the packet capture
+    Serial.print("IP Addresss: ");
+    Serial.println(WiFi.localIP());
+
     delay(2000);
 }
 
 void loop() {
-    // Get all the measurements
+    // Get all the measurements from the PZEM module
     float voltage = pzem.voltage();
     float current = pzem.current();
     float power = pzem.power();
     float energy = pzem.energy();
     float frequency = pzem.frequency();
     float pf = pzem.pf();
-
-    // Simulating the power and energy
-    // power = 600;
-    // energy += ((power / (3600/2)) / 1000);
-    // float cost = energy * 10;
 
     // Check if the measurements are valid
     if(isnan(voltage)) {
@@ -167,7 +167,7 @@ void loop() {
             // Serialize the object to produce a JSON document
             serializeJson(doc, json_output);
 
-            // Serialize a pretty version for debugging
+            // Serialize and print a pretty version for debugging
             serializeJsonPretty(doc, json_output_pretty);
             Serial.printf("Data to send to the server:%s\n", json_output_pretty);
 
