@@ -29,8 +29,8 @@ RGB rgb(PIN_RED, PIN_GREEN, PIN_BLUE);
 Buzzer buzzer(PIN_BUZZER);
 
 // Network credentials
-const char* ssid = "iometer";
-const char* password = "iometer1234";
+const char* ssid = "4studentstoo";
+const char* password = "W1F14students";
 
 const char* post_url = "https://smart-meter-iot-server.onrender.com/api/device_response";
 
@@ -61,6 +61,8 @@ const char* certificate = \
 //Simlating power and energy
 // double power = 0;
 // double energy = 0;
+
+const char device_id[] = "A";
 
 double cost = 0;
 Status led_status = Low;
@@ -99,6 +101,7 @@ void setup() {
 
     // Set the secure client with certificate
     client->setCACert(certificate);
+
     delay(2000);
 }
 
@@ -159,7 +162,7 @@ void loop() {
             // Adding members to the JsonDocument automatically converts it to object
             object["kwh"] = energy;
             object["power"] = power;
-            object["device_id"] = "A";
+            object["device_id"] = device_id;
 
             // Serialize the object to produce a JSON document
             serializeJson(doc, json_output);
@@ -195,12 +198,10 @@ void loop() {
                     buzzer.on(buzzer_status);
 
                     Serial.printf("Deserialized data: \nCost: %f\nLED: %d\nBuzzer: %d\n", cost, led_status,buzzer_status);
-
                 }
                 else {
                     Serial.printf("Deserializing failed with code %s\n", err.f_str());
                 }
-
             }
             else {
                 Serial.printf("[HTTPS] POST unsuccessful. Error: %s\n", https.errorToString(http_code).c_str());
