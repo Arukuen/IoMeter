@@ -30,8 +30,8 @@ RGB rgb(PIN_RED, PIN_GREEN, PIN_BLUE);
 Buzzer buzzer(PIN_BUZZER);
 
 // Network credentials of the WiFi
-const char* ssid = "4studentstoo";
-const char* password = "W1F14students";
+const char* ssid = "Redmi Note 11 Pro 5G";
+const char* password = "enter1225";
 
 // URL for POST request
 const char* post_url = "https://smart-meter-iot-server.onrender.com/api/device_response";
@@ -63,10 +63,35 @@ const char* certificate = \
 // The device ID of the current system, which is hardcoded for each new system
 const char device_id[] = "A";
 
+// Declare the check and cross custom character for the LED for showing successful POST request
+byte Check[] = {
+    0b00000,
+    0b00001,
+    0b00011,
+    0b10110,
+    0b11100,
+    0b01000,
+    0b00000,
+    0b00000
+};
+
+byte Cross[] = {
+  0b00000,
+  0b10001,
+  0b01010,
+  0b00100,
+  0b01010,
+  0b10001,
+  0b00000,
+  0b00000
+};
+
 // Global variables to store data received from the server
 double cost = 0;
 Status led_status = Low;
 Status buzzer_status = Low;
+// Global variable to store if the device is connected and properly sending POST request
+bool is_connected = false;
 
 // Set the JSON capacity for the request and response
 const size_t post_request_capacity = JSON_OBJECT_SIZE(3);
@@ -84,9 +109,12 @@ void setup() {
     lcd.init();
     lcd.backlight();
 
+    lcd.createChar(0, Check);
+    lcd.createChar(1, Cross);
+
     // Display an introduction 
     lcd.setCursor(0, 0);
-    lcd.print("IoMeter Demo");
+    lcd.print("IoMeter");
     lcd.setCursor(0, 1);
     lcd.print("by Team 4");
 
@@ -177,6 +205,7 @@ void loop() {
             // HTTP code is negative on error
             if (http_code > 0 && http_code == HTTP_CODE_OK) {
                 Serial.printf("[HTTPS] POST successful. Code: %d\nResponse:\n", http_code);
+                is_connected = true;
                 String payload = https.getString();
                 Serial.println(payload);
 
@@ -204,6 +233,7 @@ void loop() {
                 }
             }
             else {
+                is_connected = false;
                 Serial.printf("[HTTPS] POST unsuccessful. Error: %s\n", https.errorToString(http_code).c_str());
             }
             https.end();
@@ -218,7 +248,7 @@ void loop() {
     lcd.clear();
     lcd.home();
     lcd.print("P:");
-    lcd.print(power);
+    lcd.print(power, 1);
     lcd.print("  E:");
     lcd.print(energy, 3);
     // Display the cost
@@ -226,12 +256,20 @@ void loop() {
     lcd.print("Cost: Php");
     lcd.print(cost);
 
+    // Logic for the check/cross character for successful/failed POST request
+    if (is_connected) 
+        lcd.write(0);
+    else
+        lcd.write(1);
+
     // Logic for resetting
     int button = digitalRead(PIN_BUTTON);
     if (button) {
         lcd.clear();
         lcd.home();
         lcd.print("Resetting...");
+        led_status = Low;
+        buzzer_status = Low;
         pzem.resetEnergy();
     }
     delay(5000);

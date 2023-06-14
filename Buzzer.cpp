@@ -62,4 +62,6 @@ void Buzzer::on(Status status) {
         toHigh();
         prev_status = High;
     }
+    else if (status == Low)
+        prev_status = Low;
 }

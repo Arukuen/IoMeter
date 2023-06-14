@@ -1,6 +1,5 @@
 #include "RGB.h"
 
-
 RGB::RGB(byte pin_red, byte pin_green, byte pin_blue) {
     this->pin_red = pin_red;
     this->pin_green = pin_green;
